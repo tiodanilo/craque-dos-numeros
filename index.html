@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Craque dos Números</title>
-<meta name="description" content="Jogo de carreira de futebol com matemática do 7º ano.">
+<meta name="description" content="Jogo de carreira de futebol com matemática do 6º e 7º ano.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;800&family=Figtree:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
@@ -222,7 +222,7 @@ pre.sum{white-space:pre-wrap;background:var(--panel2);padding:12px;border-radius
 <div class="wrap">
   <header class="top">
     <button class="logo" id="home" title="Voltar ao menu (a carreira fica salva)">Craque dos <b>Números</b></button>
-    <div class="tag">Matemática · 7º ano</div>
+    <div class="tag">Matemática · 6º e 7º ano</div>
   </header>
   <main id="app"></main>
 </div>
@@ -299,8 +299,10 @@ const NEED={1:58,2:70,3:80};
 const FR=[[1,4],[2,5],[1,2],[3,5],[3,4],[4,5],[7,8]];
 const POS={ATA:"Atacante",MEI:"Meio-campo",ZAG:"Zagueiro",GOL:"Goleiro"};
 const MODES={1:"Intensa",2:"Normal",3:"Expressa"};
-const TOPICS={inteiros:"Números inteiros",fracoes:"Frações",decimais:"Decimais",porcentagem:"Porcentagem",proporcao:"Razão e proporção",
+const TOPICS={tabuada:"Tabuada",adicao:"Adição",subtracao:"Subtração",multiplicacao:"Multiplicação",divisao:"Divisão",potenciacao:"Potenciação",
+  inteiros:"Números inteiros",fracoes:"Frações",decimais:"Decimais",porcentagem:"Porcentagem",proporcao:"Razão e proporção",
   equacao:"Equações",media:"Média",geometria:"Área e perímetro",probabilidade:"Probabilidade"};
+const BASIC_T=['tabuada','adicao','subtracao','multiplicacao','divisao','potenciacao'];
 
 let S=null;
 const has=t=>S.topics.includes(t);
@@ -573,6 +575,70 @@ const APPLY={
  aposentadoria(id){if(id==='stop')return{retire:true,text:`Aos ${S.age} anos, você decidiu pendurar as chuteiras.`};return'Você decidiu seguir jogando. Ainda tem lenha para queimar!'}
 };
 
+// ================= contas básicas (6º ano) =================
+const SUP='⁰¹²³⁴⁵⁶⁷⁸⁹',sup=n=>String(n).split('').map(d=>SUP[d]).join('');
+const noCarrySum=(a,b)=>{let r=0,m=1;while(a>0||b>0){r+=((a%10+b%10)%10)*m;a=Math.floor(a/10);b=Math.floor(b/10);m*=10}return r};
+const digitSub=(a,b)=>{let r=0,m=1;while(a>0||b>0){r+=Math.abs(a%10-b%10)*m;a=Math.floor(a/10);b=Math.floor(b/10);m*=10}return r};
+const BASIC={
+ tabuada(){const a=R(3,10),b=R(3,10),v=a*b;
+  const q=pick([`No treino, o preparador mandou fazer ${a} séries de ${b} piques. Quantos piques você vai dar ao todo?`,
+   `O vestiário do ${S.club.n} tem ${a} armários, e cada um guarda ${b} pares de meião. Quantos pares de meião há no vestiário?`,
+   `Você tentou ${a} vezes e fez ${b} embaixadinhas em cada tentativa. Quantas embaixadinhas no total?`,
+   `O treino de passes tem ${a} grupos com ${b} jogadores em cada um. Quantos jogadores participam?`]);
+  return Q('tabuada',q,`${a} × ${b} = ?`,v,[a*(b+1),a*(b-1),a+b,(a+1)*b],`Pela tabuada do ${a}: ${a} × ${b} = ${v}.`)},
+ adicao(ev){
+  if(ev.type==='transfer'&&Math.random()<.6){const o=ev.data.offers.A,s=S.salary,inc=Math.round(s*o.pc/100),v=s+inc;
+    return Q('adicao',`No ${o.club.n}, o seu salário de ${brl(s)} teria um aumento de ${brl(inc)}. Qual seria o novo salário?`,`${fmt(s)} + ${fmt(inc)} = ?`,v,[noCarrySum(s,inc),v+1000,v-1000,v+100],`${fmt(s)} + ${fmt(inc)} = ${fmt(v)}. Some unidade com unidade, dezena com dezena, e não esqueça de "subir" o que passar de 9.`,brl)}
+  const k=R(0,2);let a,b,q;
+  if(k===0){a=R(1200,9800);b=R(1200,9800);q=`Nos dois últimos jogos em casa, o ${S.club.n} teve ${fmt(a)} e ${fmt(b)} torcedores. Quantos torcedores ao todo?`}
+  else if(k===1){a=R(3800,6400);b=R(3800,6400);q=`O GPS mostrou que você correu ${fmt(a)} metros no primeiro tempo e ${fmt(b)} metros no segundo. Quantos metros no jogo todo?`}
+  else{a=R(150,980);b=R(150,980);q=`Seu perfil ganhou ${a} seguidores no sábado e ${b} no domingo, depois do seu gol. Quantos seguidores novos no fim de semana?`}
+  const v=a+b;return Q('adicao',q,`${fmt(a)} + ${fmt(b)} = ?`,v,[noCarrySum(a,b),v+10,v-10,v+100],`${fmt(a)} + ${fmt(b)} = ${fmt(v)}. Some unidade com unidade, dezena com dezena, e não esqueça de "subir" o que passar de 9.`)},
+ subtracao(){const k=R(0,2);let a,b,q,f=fmt;
+  if(k===0){a=R(20,60)*1000+R(1,9)*100+R(0,9)*10;b=R(Math.floor(a*.4),Math.floor(a*.95));q=`O estádio do ${S.club.n} tem ${fmt(a)} lugares, e ${fmt(b)} ingressos foram vendidos. Quantos lugares ainda estão livres?`}
+  else if(k===1){a=R(180,420);b=R(40,a-25);q=`O recorde de gols do clube é de ${a} gols. O artilheiro do elenco já marcou ${b}. Quantos gols faltam para ele igualar o recorde?`}
+  else{a=R(1500,9000);b=R(260,1400);f=brl;q=`Você tinha ${brl(a)} guardados e comprou uma chuteira nova de ${brl(b)}. Quanto sobrou?`}
+  const v=a-b;return Q('subtracao',q,`${fmt(a)} − ${fmt(b)} = ?`,v,[digitSub(a,b),v+10,v-10,v+100],`${fmt(a)} − ${fmt(b)} = ${fmt(v)}. Quando o algarismo de cima for menor, "empreste" 1 da casa vizinha. Para conferir: ${fmt(v)} + ${fmt(b)} = ${fmt(a)}.`,f)},
+ multiplicacao(ev){
+  if(ev.type==='contrato'&&Math.random()<.7){const{b,isGoal}=ev.data,x=isGoal?R(6,20):R(15,30),bk=b/1000,v=b*x;
+    return Q('multiplicacao',`Se você fizer ${x} ${isGoal?'gols':'jogos como titular'}, quanto ganha de bônus recebendo ${brl(b)} por ${isGoal?'gol':'jogo'}?`,`${fmt(b)} × ${x} = ?`,v,[b*(x+1),b*(x-1),v/10,(bk+x)*1000],`${bk} × ${x} = ${bk*x}. Depois acrescentamos os três zeros do mil: ${fmt(b)} × ${x} = ${brl(v)}.`,brl)}
+  if(ev.type==='transfer'&&Math.random()<.5){const o=ev.data.offers.A,m=Math.max(1000,Math.round(S.salary*(1+o.pc/100)/1000)*1000),mk=m/1000,v=m*12;
+    return Q('multiplicacao',`Se o ${o.club.n} pagar ${brl(m)} por mês, quanto você recebe em 12 meses?`,`${fmt(m)} × 12 = ?`,v,[m*11,m*13,m*10,mk*12*100],`${mk} × 12 = ${mk} × 10 + ${mk} × 2 = ${mk*10} + ${mk*2} = ${mk*12}. Com os três zeros do mil: ${brl(v)}.`,brl)}
+  let a,b,q;
+  if(Math.random()<.5){a=R(25,95);b=R(3,9);q=`O ingresso para o jogo do ${S.club.n} custa ${brl(a)}. Uma família comprou ${b} ingressos. Quanto pagou?`}
+  else{a=R(120,299);b=R(12,48);q=`A camisa ${S.num} com o seu nome custa ${brl(a)}. A loja do clube vendeu ${b} camisas num dia. Quanto arrecadou?`}
+  const v=a*b,t=Math.floor(b/10),u=b%10;
+  return Q('multiplicacao',q,`${a} × ${b} = ?`,v,[a*(b+1),a*(b-1),b>=10?a*t+a*u:v+10,v+100],b>=10?`Separe o ${b} em ${t*10} + ${u}: ${a} × ${t*10} = ${fmt(a*t*10)} e ${a} × ${u} = ${fmt(a*u)}. Somando: ${fmt(v)}.`:`${a} × ${b} = ${fmt(v)}.`,brl)},
+ divisao(ev){
+  if(ev.type==='financas'&&Math.random()<.7){const X=ev.data.X,n=pick([2,4,5,8,10]),v=X/n;
+    return Q('divisao',`Você quer guardar o bônus de ${brl(X)} em ${n} partes iguais. Quanto fica em cada parte?`,`${fmt(X)} ÷ ${n} = ?`,v,[v+1000,v-1000,v*10,v+100],`${fmt(X)} ÷ ${n} = ${fmt(v)}. Para conferir: ${fmt(v)} × ${n} = ${fmt(X)}.`,brl)}
+  const k=R(0,2);let D,n,q,f=fmt;
+  if(k===0){n=pick([40,45,50]);D=n*R(6,30);q=`A torcida do ${S.club.n} vai viajar em ônibus de ${n} lugares. São ${fmt(D)} torcedores. Quantos ônibus lotados serão necessários?`}
+  else if(k===1){n=pick([20,24,25,30]);D=n*R(3,40)*100;f=brl;q=`O prêmio de ${brl(D)} pela classificação vai ser dividido igualmente entre os ${n} jogadores do elenco. Quanto cada um recebe?`}
+  else{n=pick([6,7,8,9]);D=n*R(12,99);q=`O roupeiro tem ${D} meiões para dividir igualmente em ${n} sacolas. Quantos meiões vão em cada sacola?`}
+  const v=D/n;return Q('divisao',q,`${fmt(D)} ÷ ${n} = ?`,v,[v+1,v-1,v*10,v+10],`${fmt(D)} ÷ ${n} = ${fmt(v)}. Para conferir, faça a operação inversa: ${fmt(v)} × ${n} = ${fmt(D)}.`,f)},
+ potenciacao(ev){
+  if(ev.type==='escolinha'&&Math.random()<.7){const s=Math.round(Math.sqrt(ev.data.aB)),v=s*s;
+    return Q('potenciacao',`O terreno B é um quadrado com ${s} m de lado, então a área dele é ${s}² metros quadrados. Quanto é ${s}²?`,`${s}² = ?`,v,[2*s,4*s,v+s,v-s],`${s}² = ${s} × ${s} = ${fmt(v)}. O expoente 2 diz que o ${s} é multiplicado por ele mesmo.`,x=>fmt(x)+' m²')}
+  const k=R(0,3);let b,n,q,f=fmt;
+  if(k===0){b=2;n=R(3,6);q=`Um torneio mata-mata começa com 2${sup(n)} times (2 elevado a ${n}). Quantos times disputam o torneio?`}
+  else if(k===1){b=pick([2,3,4,5]);n=b===2?R(3,6):b===3?R(2,4):R(2,3);q=`Um vídeo do seu gol viralizou: cada pessoa mandou para ${b} amigos. Na rodada ${n} de compartilhamentos, ${b}${sup(n)} pessoas receberam o vídeo. Quantas pessoas são?`}
+  else if(k===2){b=R(6,15);n=2;f=x=>fmt(x)+' m²';q=`A área de treino dos goleiros é um quadrado com ${b} m de lado, então a área é ${b}² metros quadrados. Quanto é ${b}²?`}
+  else{b=10;n=R(3,6);q=`Depois da final, seu perfil chegou a 10${sup(n)} seguidores. Quantos seguidores são?`}
+  const v=Math.pow(b,n);
+  return Q('potenciacao',q,`${b}${sup(n)} = ?`,v,[b*n,Math.pow(b,n-1),Math.pow(b,n+1),b+n],`${b}${sup(n)} = ${Array(n).fill(b).join(' × ')} = ${fmt(v)}. A potência é uma multiplicação de fatores iguais: a base ${b} aparece ${n} vezes.`,f)}
+};
+// Escolhe a conta da decisão: a do próprio evento (7º ano) ou uma básica (6º ano), conforme os conteúdos marcados.
+function ensureMath(ev){
+  const basics=BASIC_T.filter(has),adv=Object.keys(TOPICS).filter(t=>!BASIC_T.includes(t)&&has(t));
+  const ownOk=!!(ev.math&&has(ev.math.topic));
+  let useBasic=false;
+  if(!ownOk)useBasic=basics.length>0;
+  else if(basics.length)useBasic=Math.random()<basics.length/(basics.length+adv.length);
+  if(useBasic)ev.math=BASIC[pick(basics)](ev);else if(!ownOk)ev.math=null;
+  return ev;
+}
+
 function chooseEvent(){
   if(S.forceTransfer){S.forceTransfer=false;return EV.transfer.gen()}
   if(S.age>=36||(S.age>=33&&Math.random()<.5))return EV.aposentadoria.gen();
@@ -581,7 +647,7 @@ function chooseEvent(){
   const up=S.club.tier<3&&S.ovr>=NEED[S.club.tier+1]-5&&S.year-S.lastMove>=2&&!S.loanHome;
   if(up&&Math.random()<.6)return EV.transfer.gen();
   const c=[];
-  for(const[k,e]of Object.entries(EV)){if(k===S.lastType)continue;const w=e.w();if(w<=0)continue;if(!e.noMath&&!e.topics.some(has))continue;c.push([k,w])}
+  for(const[k,e]of Object.entries(EV)){if(k===S.lastType)continue;const w=e.w();if(w<=0)continue;if(!e.noMath&&!e.topics.some(has)&&!BASIC_T.some(has))continue;c.push([k,w])}
   if(!c.length)return EV.transfer.gen();
   let t=c.reduce((s,x)=>s+x[1],0)*Math.random();for(const[k,w]of c){t-=w;if(t<=0)return EV[k].gen()}
   return EV[c[0][0]].gen();
@@ -749,7 +815,7 @@ const app=document.getElementById('app');
 function table(t){if(!t)return'';return`<div class="scroll"><table class="data"><thead><tr>${t.head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r=>`<tr>${r.map(c=>typeof c!=='object'?`<td>${esc(c)}</td>`:c.club?`<td><div class="cl">${crest(c.club,24)}<span>${esc(c.text)}</span></div></td>`:`<td class="new">${c.new}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
 
 function intro(msg=''){
-  const sv=load(),hl=hall();
+  const sv=load(),hl=hall();let savedT=null;try{savedT=JSON.parse(localStorage.getItem('craque-topics')||'null')}catch(e){}
   app.innerHTML=`
   ${sv&&sv.phase!=='final'?`<div class="panel continue pop">
     ${shirt(sv.club,sv.num,70)}
@@ -763,9 +829,9 @@ function intro(msg=''){
     </div>
     <div class="pitch" aria-hidden="true"><div class="circ"></div>
       <div class="eq" style="left:10%;top:16%">2x + 5 = 21</div>
-      <div class="eq" style="right:8%;top:40%">¾ de 40</div>
+      <div class="eq" style="right:8%;top:40%">7 × 8</div>
       <div class="eq" style="left:16%;bottom:16%">+25%</div>
-      <div class="eq" style="right:14%;bottom:12%">26/40 = ?%</div>
+      <div class="eq" style="right:14%;bottom:12%">2⁵ = ?</div>
     </div>
   </section>
   <form id="f" class="panel">
@@ -786,7 +852,11 @@ function intro(msg=''){
       <div class="stack">
         <h2 style="font-size:28px">Conteúdos</h2>
         <p class="mut">Professor(a): marque os temas que a turma está estudando. As decisões usam só esses conteúdos.</p>
-        <div class="chips">${Object.entries(TOPICS).map(([k,v])=>`<label class="chip"><input type="checkbox" name="tp" value="${k}" checked>${v}</label>`).join('')}</div>
+        <div class="row"><button type="button" class="btn small ghost" data-preset="6">Turma do 6º ano</button><button type="button" class="btn small ghost" data-preset="7">Turma do 7º ano</button><button type="button" class="btn small ghost" data-preset="all">Todos</button></div>
+        <div class="label">6º ano</div>
+        <div class="chips">${BASIC_T.map(k=>`<label class="chip"><input type="checkbox" name="tp" value="${k}" ${!savedT||savedT.includes(k)?'checked':''}>${TOPICS[k]}</label>`).join('')}</div>
+        <div class="label">7º ano</div>
+        <div class="chips">${Object.keys(TOPICS).filter(k=>!BASIC_T.includes(k)).map(k=>`<label class="chip"><input type="checkbox" name="tp" value="${k}" ${!savedT||savedT.includes(k)?'checked':''}>${TOPICS[k]}</label>`).join('')}</div>
         <div style="margin-top:auto" class="stack">
           ${sv&&sv.phase!=='final'?`<p style="color:var(--gold);font-size:14px">Começar uma nova carreira substitui a carreira salva de ${esc(sv.nome)}. Copie o código dela antes, se quiser guardar.</p>`:''}
           <button class="btn" type="submit">Começar carreira</button>
@@ -803,12 +873,14 @@ function intro(msg=''){
     </div>
   </div>`;
   const cont=document.getElementById('cont');if(cont)cont.onclick=()=>{migrate(sv);render()};
+  document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const p=b.dataset.preset;document.querySelectorAll('input[name=tp]').forEach(x=>x.checked=p==='all'||(p==='6')===BASIC_T.includes(x.value))});
   document.getElementById('impb').onclick=()=>{const m=document.getElementById('impmsg');
     try{const o=decode(document.getElementById('imp').value);if(!o||!o.nome||!o.club)throw 0;migrate(o);save();render()}catch(e){m.style.color='var(--red)';m.textContent='Código inválido. Confira se copiou o código inteiro.'}};
   document.getElementById('f').addEventListener('submit',e=>{
     e.preventDefault();
     const tps=[...document.querySelectorAll('input[name=tp]:checked')].map(x=>x.value);
     if(!tps.length){document.getElementById('err').textContent='Escolha pelo menos um conteúdo.';return}
+    try{localStorage.setItem('craque-topics',JSON.stringify(tps))}catch(e){}
     start({nome:document.getElementById('nome').value.trim()||'Craque',
       num:clamp(parseInt(document.getElementById('num').value)||10,1,99),pe:document.getElementById('pe').value,
       pais:document.getElementById('pais').value,pos:document.querySelector('input[name=pos]:checked').value,
@@ -823,7 +895,7 @@ function start(o){
 }
 function newEvent(){
   S.mods={};S.attrStart={...S.attr};
-  S.ev=chooseEvent();S.lastType=S.ev.type;S.evOk=null;
+  S.ev=ensureMath(chooseEvent());S.lastType=S.ev.type;S.evOk=null;
   S.phase=S.ev.math?'q':'choose';save();render();window.scrollTo({top:0});
 }
 function startStep(){
