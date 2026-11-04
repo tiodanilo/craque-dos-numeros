@@ -296,6 +296,7 @@ const NAT_CUP={CONMEBOL:'Copa América',UEFA:'Eurocopa',CONCACAF:'Copa Ouro'};
 const WC_YEARS=[2030,2034,2038,2042,2046,2050],CONT_YEARS=[2028,2032,2036,2040,2044,2048];
 
 const NEED={1:58,2:70,3:80};
+const clubNeed=c=>NEED[c.tier]+(c.tier===3?(c.q-7)*3:c.tier===2?Math.max(0,c.q-6)*2:0);
 const FR=[[1,4],[2,5],[1,2],[3,5],[3,4],[4,5],[7,8]];
 const POS={ATA:"Atacante",MEI:"Meio-campo",ZAG:"Zagueiro",GOL:"Goleiro"};
 const MODES={1:"Intensa",2:"Normal",3:"Expressa"};
@@ -310,14 +311,16 @@ const pickTopic=list=>{const l=list.filter(has);return l.length?pick(l):null};
 const myNat=()=>COUNTRIES[S.pais].n;
 const tourOf=y=>WC_YEARS.includes(y)?{name:'Copa do Mundo',wc:true}:CONT_YEARS.includes(y)?{name:NAT_CUP[COUNTRIES[S.pais].conf],wc:false}:null;
 const nextWC=()=>WC_YEARS.find(y=>y>=S.year);
-function pickClub(tier,excl=[]){
+function pickClub(tier,excl=[],maxNeed=99){
   const own=COUNTRIES[S.pais];
-  let pool=ALL.filter(c=>c.tier===tier&&!excl.includes(c.n)&&!['SA1','US1','NO1'].includes(c.lk));
+  const base=ALL.filter(c=>c.tier===tier&&!excl.includes(c.n)&&!['SA1','US1','NO1'].includes(c.lk));
+  let pool=base.filter(c=>clubNeed(c)<=maxNeed);
+  if(!pool.length&&base.length){const mn=Math.min(...base.map(clubNeed));pool=base.filter(c=>clubNeed(c)===mn)}
   if(tier===1){const o=pool.filter(c=>c.lk===own.div2);if(o.length)pool=o}
   if(tier===2&&Math.random()<.5){const o=pool.filter(c=>c.lk===own.top);if(o.length)pool=o}
   return {...pick(pool.length?pool:ALL.filter(c=>c.tier===tier))};
 }
-const estPlay=(ovr,tier)=>clamp(0.3+(ovr-NEED[tier])/18,0.12,1);
+const estPlay=(ovr,t)=>clamp(0.3+(ovr-(typeof t==='object'?clubNeed(t):NEED[t]))/18,0.12,1);
 function nearestFr(x){let b=FR[0];for(const f of FR)if(Math.abs(f[0]/f[1]-x)<Math.abs(b[0]/b[1]-x))b=f;return b}
 const frs=f=>f[0]+'/'+f[1];
 function moveTo(c,loan=false){S.club={...c};if(!loan)S.lastMove=S.year;S.clubs.push({...slim(c),from:S.year,loan})}
@@ -329,7 +332,7 @@ function compsFor(c){const lg=lgOf(c),cc=CONF_CUPS[lg.conf];const out=[{k:'liga'
   if(S.mundial)out.push({k:'mund',n:'Mundial de Clubes'});
   return out}
 function chanceOf(k,str,c){return k==='liga'?str:k==='cup'?str*.7:k==='cont'?str*(c.tier===3?.5:.4):k==='sec'?str*.8:k==='mund'?(lgOf(c).conf==='EU'?.55:.35):0}
-function chanceList(){const c=S.club,str=strOf(c,S.ovr,estPlay(S.ovr,c.tier));return compsFor(c).map(x=>({n:x.n,p:Math.round(chanceOf(x.k,str,c)*100)}))}
+function chanceList(){const c=S.club,str=strOf(c,S.ovr,estPlay(S.ovr,c));return compsFor(c).map(x=>({n:x.n,p:Math.round(chanceOf(x.k,str,c)*100)}))}
 const STAGES={cup:['na 1ª fase','nas oitavas','nas quartas','na semifinal','na final'],cont:['na fase de grupos','nas oitavas','nas quartas','na semifinal','na final'],mund:['na semifinal','na final']};
 STAGES.sec=STAGES.cont;
 function runCup(k,p){const st=STAGES[k],n=st.length,r=Math.pow(Math.max(p,0.001),1/n);let i=0;while(i<n&&Math.random()<r)i++;
@@ -386,14 +389,14 @@ function initAttrs(t){S.attr={};attrList().forEach(([k])=>{const w=WEI[S.pos][k]
 // ================= eventos (decisões) =================
 const EV={
  transfer:{noMath:true,w:()=>S.loanHome?0:(S.year-S.lastMove>=2?0.8:0.2),gen(){
-  const cur=S.club,up=cur.tier<3&&S.ovr>=NEED[cur.tier+1]-5;
-  const tA=up?cur.tier+1:cur.tier,A=pickClub(tA,[cur.n]);
-  const tB=(up&&Math.random()<.5)?cur.tier:tA,B=pickClub(tB,[cur.n,A.n]);
+  const cur=S.club,up=cur.tier<3&&S.ovr>=NEED[cur.tier+1]-2;
+  const tA=up?cur.tier+1:cur.tier,A=pickClub(tA,[cur.n],S.ovr+3);
+  const tB=(up&&Math.random()<.5)?cur.tier:tA,B=pickClub(tB,[cur.n,A.n],S.ovr+3);
   const big=t=>t>cur.tier;
   const pcA=big(tA)?pick([50,80,100,150]):pick([20,25,30,40]);
   let pcB=big(tB)?pick([50,80,100,150]):pick([20,25,30,40]);if(pcB===pcA)pcB+=10;
   const pcS=pick([5,10,15,20]);
-  const offers={A:{club:A,pc:pcA,fr:nearestFr(estPlay(S.ovr,tA)+R(-1,1)*.1)},B:{club:B,pc:pcB,fr:nearestFr(estPlay(S.ovr,tB)+R(-1,1)*.1)},stay:{club:cur,pc:pcS,fr:nearestFr(estPlay(S.ovr,cur.tier)+.05)}};
+  const offers={A:{club:A,pc:pcA,fr:nearestFr(estPlay(S.ovr,A)+R(-1,1)*.1)},B:{club:B,pc:pcB,fr:nearestFr(estPlay(S.ovr,B)+R(-1,1)*.1)},stay:{club:cur,pc:pcS,fr:nearestFr(estPlay(S.ovr,cur)+.05)}};
   const s=S.salary,topic=pickTopic(['porcentagem','fracoes']);let math=null;
   if(topic==='porcentagem'){const v=s*(1+pcA/100);math=Q(topic,`Quanto o ${A.n} vai pagar por mês?`,`${brl(s)} + ${pcA}% = ?`,v,[s*pcA/100,s+pcA,s*(1+pcA/10)],`${pcA}% de ${brl(s)} = ${pcA}/100 × ${fmt(s)} = ${brl(s*pcA/100)}. Novo salário = ${brl(s)} + ${brl(s*pcA/100)} = ${brl(v)}.`,brl)}
   if(topic==='fracoes'){const[n,d]=offers.A.fr,v=40*n/d;math=Q(topic,`Em quantos dos 40 jogos da temporada você seria titular no ${A.n}?`,`${n}/${d} de 40 = ?`,v,[40/d,40-v,v+d],`40 ÷ ${d} = ${40/d}; ${40/d} × ${n} = ${v} jogos.`)}
@@ -420,7 +423,7 @@ const EV={
    math:Q('porcentagem',`Qual seria o seu novo salário mensal?`,`${brl(s)} + ${pc}% = ?`,v,[s*pc/100,s*pc/100*2,s*(1+pc/1000)],`${pc}% de ${brl(s)} = ${pc}/100 × ${fmt(s)} = ${brl(s*pc/100)}. Novo salário = ${brl(s)} + ${brl(s*pc/100)} = ${brl(v)}.${pc===200?' Um aumento de 200% significa triplicar o salário.':''}`,brl),
    choices:[{id:'go',club:C,label:`Assinar com o ${C.n}`,desc:`Aumento de ${pc}%`},{id:'no',club:S.club,label:`Ficar no ${S.club.n}`,desc:'Seguir brigando por títulos grandes'}]};
  }},
- emprestimo:{topics:['fracoes'],w:()=>(S.club.tier>=2&&estPlay(S.ovr,S.club.tier)<0.5&&!S.loanHome)?2:0,gen(){
+ emprestimo:{topics:['fracoes'],w:()=>(S.club.tier>=2&&estPlay(S.ovr,S.club)<0.5&&!S.loanHome)?2:0,gen(){
   const f1=pick([[1,8],[1,5],[1,4]]),f2=pick([[3,4],[4,5],[7,8]]),g1=40*f1[0]/f1[1],g2=40*f2[0]/f2[1];
   const low=pickClub(S.club.tier-1);
   return{type:'emprestimo',title:'Pouco espaço no time',data:{low,f1,f2},
@@ -452,11 +455,11 @@ const EV={
   const hard=R(0,2);let math=null;
   const progs=ch.map(([k,name],i)=>{const intense=i===hard;
     if(topic==='decimais'&&k===sp){
-      const step=gk?0.01:0.05,t=gk?R(40,60)/100:R(400,460)/100,n=intense?R(4,6):R(2,3),d=round2(n*step),nv=round2(t-d);
+      const step=gk?0.01:0.05,t=gk?R(40,60)/100:R(400,460)/100,n=intense?R(3,4):R(1,2),d=round2(n*step),nv=round2(t-d);
       const f=v=>v.toFixed(2).replace('.',',')+' s';
       math=Q('decimais',gk?'Qual seria o seu novo tempo de reação?':'Qual seria o seu novo tempo nos 30 m?',`${f(t)} − ${f(d)} = ?`,nv,[round2(t+d),round2(nv+step*2),round2(nv-step*2)],`Alinhe as vírgulas: ${t.toFixed(2).replace('.',',')} − ${d.toFixed(2).replace('.',',')} = ${nv.toFixed(2).replace('.',',')} s. Cada ${f(step)} a menos vale +1 ponto, então o programa dá +${n} em ${name}.`,f);
       return{k,name,intense,gain:n,how:`Baixa ${f(d)} no seu ${gk?'tempo de reação':'tempo nos 30 m'} (hoje ${f(t)}). Cada ${f(step)} a menos = +1 ponto`}}
-    const a=intense?2:1,b=pick([2,3,4]),kk=R(2,4),ses=b*kk;
+    const a=intense?2:1,b=pick([3,4,5]),kk=R(2,3),ses=b*kk;
     return{k,name,intense,gain:a*kk,a,b,ses,how:`+${a} ponto${a>1?'s':''} a cada ${b} sessões · ${ses} sessões`}});
   if(!math){const p=progs[R(0,2)],kk=p.ses/p.b;
     math=Q('proporcao',`Quantos pontos de ${p.name} você ganharia nas ${p.ses} sessões desse programa?`,`${p.a}/${p.b} = x/${p.ses}`,p.gain,[p.ses,p.a+p.ses-p.b,p.gain+p.b],`${p.ses} sessões é ${kk} vezes ${p.b} sessões. Os pontos também se multiplicam por ${kk}: ${p.a} × ${kk} = ${p.gain}.`)}
@@ -644,7 +647,8 @@ function chooseEvent(){
   if(S.age>=36||(S.age>=33&&Math.random()<.5))return EV.aposentadoria.gen();
   const ty=[...Array(S.mode).keys()].map(i=>S.year+i).find(y=>WC_YEARS.includes(y));
   if(ty&&S.convFor!==ty&&callChance()>=.15&&Math.random()<.6){S.convFor=ty;return EV.convocacao.gen(ty)}
-  const up=S.club.tier<3&&S.ovr>=NEED[S.club.tier+1]-5&&S.year-S.lastMove>=2&&!S.loanHome;
+  const better=ALL.some(c=>c.tier>=S.club.tier&&clubNeed(c)>clubNeed(S.club)&&clubNeed(c)<=S.ovr+3&&!['SA1','US1','NO1'].includes(c.lk));
+  const up=better&&S.year-S.lastMove>=2&&!S.loanHome;
   if(up&&Math.random()<.6)return EV.transfer.gen();
   const c=[];
   for(const[k,e]of Object.entries(EV)){if(k===S.lastType)continue;const w=e.w();if(w<=0)continue;if(!e.noMath&&!e.topics.some(has)&&!BASIC_T.some(has))continue;c.push([k,w])}
@@ -656,7 +660,7 @@ function chooseEvent(){
 // ================= simulação de temporada =================
 function simSeason(first){
   const c=S.club,need=NEED[c.tier],m=S.mods,pos=S.pos,b0=S.ovr,lg=lgOf(c);
-  let play=estPlay(S.ovr,c.tier);if(m.play!=null)play=(play+m.play)/2;play=clamp(play+(m.conf||0),0.05,1);
+  let play=estPlay(S.ovr,c);if(m.play!=null)play=(play+m.play)/2;play=clamp(play+(m.conf||0),0.05,1);
   if(first&&m.firstOut)play*=1-m.firstOut;
   let games=clamp(Math.round(40*play*(0.88+Math.random()*0.17)),0,40);
   let inj=null;
@@ -684,7 +688,7 @@ function simSeason(first){
   if(pos==='ATA'&&goals>=(c.tier===3?24:20)&&Math.random()<.7)aw.push('Artilheiro');
   if(pos==='GOL'&&cs>=16&&Math.random()<.6)aw.push('Luva de Ouro');
   if(S.ovr>=need+12&&play>.6&&Math.random()<.45)aw.push('Craque da '+lg.n);
-  if(c.tier===3&&S.ovr>=87&&play>.6&&Math.random()<0.18+(S.ovr-87)*0.07+(S.mundial?.2:0))aw.push('Bola de Ouro');
+  if(c.tier===3&&S.ovr>=84&&play>.6&&Math.random()<0.15+(S.ovr-84)*0.06+(S.mundial?.2:0))aw.push('Bola de Ouro');
   // seleção
   const cp=callChance();let nat=null;const tour=tourOf(S.year);
   if(tour){nat=runTournament(tour,cp+(m.callBonus||0),(inj&&inj.out>=16)||!!m.hurtTour);
@@ -698,8 +702,8 @@ function simSeason(first){
   S.pop=clamp(Math.round(S.pop+goals*0.3+titles.length*4+aw.length*6+(nat&&nat.called?3:0)),0,100);
   // evolução
   const a=S.age;let g;
-  if(a<=23)g=Math.round(R(1,3)+Math.max(0,S.pot-S.ovr)*0.085*play);
-  else if(a<=28)g=S.ovr<S.pot?R(0,2):R(-1,1);
+  if(a<=23)g=Math.round(R(0,2)+Math.max(0,S.pot-S.ovr)*0.085*play);
+  else if(a<=28)g=S.ovr<S.pot?R(0,1):R(-1,0);
   else if(a<=31)g=R(-1,1);
   else if(a<=34)g=-R(1,3);
   else g=-R(2,4);
@@ -710,7 +714,7 @@ function simSeason(first){
   return h;
 }
 function makeCareer(o){
-  S={...o,year:2027,age:17,ovr:R(56,62),pot:R(76,95),salary:R(4,9)*1000,money:0,pop:5,peak:0,lastMove:2027,
+  S={...o,year:2027,age:17,ovr:R(56,62),pot:71+Math.round(24*Math.pow(Math.random(),1.3)),salary:R(4,9)*1000,money:0,pop:5,peak:0,lastMove:2027,
      goals:0,assists:0,cs:0,games:0,caps:0,intlGoals:0,wcs:0,titles:[],awards:[],legacy:[],history:[],decisions:[],clubs:[],mods:{},school:false,injuries:0,mundial:false,cupFinal:null};
   initAttrs(S.ovr);S.peak=S.ovr;S.club=pickClub(1);S.clubs.push({...slim(S.club),from:2027,loan:false});
   return S;
@@ -719,7 +723,7 @@ function finalStats(){
   const math=S.decisions.filter(d=>d.ok!=null),okN=math.filter(d=>d.ok).length,acc=math.length?Math.round(100*okN/math.length):0;
   const bolas=S.awards.filter(a=>a.t==='Bola de Ouro').length,wc=S.titles.filter(t=>t.t==='Copa do Mundo').length;
   const score=S.titles.length*2+bolas*8+wc*10+S.awards.length*1.5+acc/10+Math.max(0,S.peak-60)/2+S.legacy.length*2;
-  const lvl=score>=90?'Lenda':score>=60?'Ídolo':score>=35?'Craque':score>=18?'Titular':'Promessa';
+  const lvl=score>=60?'Lenda':score>=40?'Ídolo':score>=26?'Craque':score>=14?'Titular':'Promessa';
   return{acc,okN,n:math.length,bolas,wc,score,lvl};
 }
 
@@ -776,7 +780,7 @@ function ttype(t){if(t==='Copa do Mundo')return'world';if(Object.values(NAT_CUP)
   if(CONT_NAMES.includes(t))return'bigear';if(CUP_NAMES.includes(t))return'cup';
   if(t==='Bola de Ouro'||t==='Melhor da Copa')return'ball';if(t==='Artilheiro')return'boot';if(t==='Luva de Ouro')return'glove';if(t.startsWith('Craque'))return'star';return'league'}
 const TORDER={world:0,ball:1,bigear:2,globe:3,natcup:4,league:5,cup:6,boot:7,glove:8,star:9};
-function trophyIcon(t,size=34){const G='#f5c542',GD='#b8860b',SV='#dfe5ea',SVD='#8a96a3',K='#0b120e',ln=`stroke="${K}" stroke-width="1.5" stroke-linejoin="round"`;
+function trophyIcon(t,size=34){const tid='tg'+(++_cid),G=`url(#${tid}g)`,GD='#a87a12',SV=`url(#${tid}s)`,SVD='#7d8995',K='#0b120e',ln=`stroke="${K}" stroke-width="1.5" stroke-linejoin="round"`;
   const base=c=>`<rect x="12" y="40" width="16" height="6" rx="1" fill="${c}" ${ln}/><rect x="17" y="31" width="6" height="10" fill="${c}" ${ln}/>`;
   const handles=(col,w)=>`<path d="M11 9C4 9 4 19 12 20M29 9C36 9 36 19 28 20" fill="none" stroke="${K}" stroke-width="${w+2}"/><path d="M11 9C4 9 4 19 12 20M29 9C36 9 36 19 28 20" fill="none" stroke="${col}" stroke-width="${w}"/>`;
   let b='';
@@ -792,7 +796,8 @@ function trophyIcon(t,size=34){const G='#f5c542',GD='#b8860b',SV='#dfe5ea',SVD='
    case'glove':b=[9.5,14.5,19.5,24.5].map(x=>`<rect x="${x}" y="4" width="4.6" height="17" rx="2.3" fill="${G}" ${ln}/>`).join('')+`<rect x="27" y="17" width="5" height="12" rx="2.5" transform="rotate(-30 29 23)" fill="${G}" ${ln}/><rect x="9" y="16" width="20" height="21" rx="6" fill="${G}" ${ln}/><rect x="10" y="36" width="18" height="7" rx="1.5" fill="${GD}" ${ln}/>`;break;
    default:{const p=[];for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?6.5:15;p.push((20+rr*Math.cos(a)).toFixed(1)+','+(24+rr*Math.sin(a)).toFixed(1))}b=`<path d="M13 2L20 12L27 2" fill="none" stroke="#3b82c4" stroke-width="5"/><polygon points="${p.join(' ')}" fill="${G}" ${ln}/>`}
   }
-  return`<svg width="${size}" height="${Math.round(size*1.2)}" viewBox="0 0 40 48" role="img" aria-label="${esc(t)}">${b}</svg>`;
+  const defs=`<defs><linearGradient id="${tid}g" x1="0" x2="1" y1="0" y2=".3"><stop offset="0" stop-color="#b07d10"/><stop offset=".42" stop-color="#ffe88f"/><stop offset=".6" stop-color="#f5c542"/><stop offset="1" stop-color="#a8760c"/></linearGradient><linearGradient id="${tid}s" x1="0" x2="1" y1="0" y2=".3"><stop offset="0" stop-color="#8693a0"/><stop offset=".42" stop-color="#ffffff"/><stop offset=".6" stop-color="#dfe5ea"/><stop offset="1" stop-color="#7f8b97"/></linearGradient></defs>`;
+  return`<svg width="${size}" height="${Math.round(size*1.2)}" viewBox="0 0 40 48" role="img" aria-label="${esc(t)}">${defs}${b}</svg>`;
 }
 function groupTitles(){const m={};[...S.titles,...S.awards].forEach(x=>{(m[x.t]=m[x.t]||[]).push(x.y)});
   return Object.entries(m).sort((a,b)=>TORDER[ttype(a[0])]-TORDER[ttype(b[0])]||b[1].length-a[1].length)}
@@ -907,7 +912,7 @@ function startStep(){
 function answer(v){
   if(S.phase!=='q')return;
   const ok=Math.abs(v-S.ev.math.correct)<1e-9;S.evOk=ok;S.picked=v;
-  if(ok){addAll(1);S.mods.conf=0.05}
+  if(ok){const k=wpick(attrList().filter(([x])=>WEI[S.pos][x]>0),([x])=>WEI[S.pos][x])[0];addAttr(k,2);S.bonusAttr=k;S.mods.conf=0.05}
   S.phase='choose';save();render();
 }
 function choose(id){
@@ -938,7 +943,7 @@ function render(){
         <div class="question">${esc(m.q)}</div><div class="eqbox">${esc(m.eq)}</div>
         <div class="opts">${m.opts.map((o,i)=>{let cls='';if(answered){if(Math.abs(o.v-m.correct)<1e-9)cls='right';else if(Math.abs(o.v-S.picked)<1e-9)cls='wrong'}
           return`<button class="opt ${cls}" data-v="${o.v}" ${answered?'disabled':''}><span class="k">${'ABCD'[i]}</span>${esc(o.t)}</button>`}).join('')}</div>
-        ${answered?`<div class="feedback ${S.evOk?'ok':'no'}"><h3>${S.evOk?'Conta certa: decisão bem informada (+1 em todos os atributos)':'Errou a conta, mas agora você sabe'}</h3><p>${esc(m.exp)}</p></div>`:''}
+        ${answered?`<div class="feedback ${S.evOk?'ok':'no'}"><h3>${S.evOk?'Conta certa: decisão bem informada (+2 em '+attrName(S.bonusAttr||speedKey())+')':'Errou a conta, mas agora você sabe'}</h3><p>${esc(m.exp)}</p></div>`:''}
       </div>`:''}
       ${S.phase==='choose'?`<div class="step"><div class="label">Sua decisão</div><div class="choices">${ev.choices.map(c=>`<button class="choice" data-id="${c.id}" ${c.off?'disabled':''}><div class="hd">${c.club?crest(c.club,32):''}<strong>${esc(c.label)}</strong></div><span>${esc(c.off?'Dinheiro insuficiente · '+c.desc:c.desc)}</span></button>`).join('')}</div></div>`:''}`;
   } else if(S.phase==='result'){
