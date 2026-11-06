@@ -16,6 +16,7 @@ O aluno cria um jogador, começa na segunda divisão do seu país aos 17 anos e 
 - **Seleção**: Copa do Mundo a cada 4 anos (2030, 2034, 2038...) e Copa América, Eurocopa ou Copa Ouro nos anos intermediários. O jogo mostra a chance de convocação e todos os jogos da seleção.
 - **Decisões**: janela de transferências, proposta milionária da Arábia ou dos EUA, proposta do frio, empréstimo, lesão, final com pênaltis, treino especial, convocação para a Copa, renovação de contrato, bônus para investir, escolinha de futebol, briga pela posição e aposentadoria.
 - **Atributos**: Velocidade, Finalização, Passe, Marcação e Físico (goleiros têm Reflexos, Posicionamento, Reposição e Saída do gol). Sobem com treinos especiais e caem com lesões e com a idade.
+- **Jogo decisivo**: depois de cada decisão, o aluno joga uma partida de 3 lances. Cada lance é uma conta: acertar cria uma chance de gol, errar dá chance ao adversário. Vencer aumenta as chances de título da temporada, perder diminui.
 - **Sala de troféus** sempre visível, com comemoração a cada título.
 - **Porcentagem de acertos** nas contas aparece durante o jogo e em destaque no final, separada por conteúdo.
 - **Carreira salva** automaticamente no navegador. Para trocar de computador, o aluno copia o código da carreira e cola na tela inicial.
